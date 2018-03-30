@@ -58,20 +58,9 @@
 # To rebuild project do "make clean" then "make all".
 #----------------------------------------------------------------------------
 
-# MCU name(s)
-# 	Since the ATMEGA8U2 part is not directly supported by the current
-#	versions of either avrdude or dfu-programmer, we specify a dummy
-#	part; AT90USB82 which is close enough in memory size and organization
-MCU = atmega8u2
-MCU_AVRDUDE = at90usb82
-MCU_DFU = at90usb82
 
-# Specify the Arduino model using the assigned PID.  This is used by Descriptors.c
-#   to set PID and product descriptor string
-# Uno PID:
-ARDUINO_MODEL_PID = 0x0001
-# Mega 2560 PID:
-#ARDUINO_MODEL_PID = 0x0010
+# MCU name
+MCU = atmega16u2
 
 
 # Target board (see library "Board Types" documentation, NONE for projects not requiring
@@ -113,7 +102,7 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = Arduino-mouse
+TARGET = Mouse
 
 
 # Object files directory
@@ -123,29 +112,32 @@ OBJDIR = .
 
 
 # Path to the LUFA library
-LUFA_PATH = ../..
-
+LUFA_PATH = ../libraries/lufa-lib-master/
 
 # LUFA library compile-time options
 LUFA_OPTS  = -D USB_DEVICE_ONLY
 LUFA_OPTS += -D FIXED_CONTROL_ENDPOINT_SIZE=8
 LUFA_OPTS += -D FIXED_NUM_CONFIGURATIONS=1
 LUFA_OPTS += -D USE_FLASH_DESCRIPTORS
-LUFA_OPTS += -D DEVICE_STATE_AS_GPIOR=0
 LUFA_OPTS += -D USE_STATIC_OPTIONS="(USB_DEVICE_OPT_FULLSPEED | USB_OPT_REG_ENABLED | USB_OPT_AUTO_PLL)"
-LUFA_OPTS += -D NO_DEVICE_SELF_POWER
-LUFA_OPTS += -D NO_DEVICE_REMOTE_WAKEUP
-LUFA_OPTS += -D NO_INTERNAL_SERIAL
-
-# Create the LUFA source path variables by including the LUFA root makefile
-include $(LUFA_PATH)/LUFA/makefile
 
 
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).c                                                 \
 	  Descriptors.c                                               \
-	  $(LUFA_SRC_USB)                                             \
-	  $(LUFA_SRC_USBCLASS)
+	  $(LUFA_PATH)/LUFA/Drivers/USB/LowLevel/DevChapter9.c        \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/LowLevel/Endpoint.c           \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/LowLevel/Host.c               \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/LowLevel/HostChapter9.c       \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/LowLevel/LowLevel.c           \
+ 	  $(LUFA_PATH)/LUFA/Drivers/USB/LowLevel/Pipe.c               \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/HighLevel/Events.c            \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/HighLevel/USBInterrupt.c      \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/HighLevel/USBTask.c           \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/HighLevel/ConfigDescriptor.c  \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/Class/Device/HID.c            \
+	  $(LUFA_PATH)/LUFA/Drivers/USB/Class/Host/HID.c              \
+ 	  $(LUFA_PATH)/LUFA/Drivers/USB/Class/Host/HIDParser.c        \
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
@@ -191,28 +183,15 @@ CSTANDARD = -std=gnu99
 
 
 # Place -D or -U options here for C sources
-CDEFS  = -DF_CPU=$(F_CPU)UL 
-CDEFS += -DF_CLOCK=$(F_CLOCK)UL 
-CDEFS += -DARDUINO_MODEL_PID=$(ARDUINO_MODEL_PID)
-CDEFS += -DBOARD=BOARD_$(BOARD) 
-CDEFS += $(LUFA_OPTS)
-CDEFS += -DAVR_RESET_LINE_PORT="PORTD"
-CDEFS += -DAVR_RESET_LINE_DDR="DDRD"
-CDEFS += -DAVR_RESET_LINE_MASK="(1 << 7)"
-CDEFS += -DTX_RX_LED_PULSE_MS=3
-CDEFS += -DPING_PONG_LED_PULSE_MS=100
+CDEFS  = -DF_CPU=$(F_CPU)UL -DF_CLOCK=$(F_CLOCK)UL -DBOARD=BOARD_$(BOARD) $(LUFA_OPTS)
+
 
 # Place -D or -U options here for ASM sources
-ADEFS  = -DF_CPU=$(F_CPU)
-ADEFS += -DF_CLOCK=$(F_CLOCK)UL
-ADEFS += -DBOARD=BOARD_$(BOARD)
-ADEFS += $(LUFA_OPTS)
+ADEFS = -DF_CPU=$(F_CPU)
+
 
 # Place -D or -U options here for C++ sources
-CPPDEFS  = -DF_CPU=$(F_CPU)UL
-CPPDEFS += -DF_CLOCK=$(F_CLOCK)UL
-CPPDEFS += -DBOARD=BOARD_$(BOARD)
-CPPDEFS += $(LUFA_OPTS)
+CPPDEFS = -DF_CPU=$(F_CPU)UL
 #CPPDEFS += -D__STDC_LIMIT_MACROS
 #CPPDEFS += -D__STDC_CONSTANT_MACROS
 
@@ -234,12 +213,11 @@ CFLAGS += -ffunction-sections
 CFLAGS += -fno-inline-small-functions
 CFLAGS += -fpack-struct
 CFLAGS += -fshort-enums
-CFLAGS += -fno-strict-aliasing
 CFLAGS += -Wall
 CFLAGS += -Wstrict-prototypes
 #CFLAGS += -mshort-calls
+CFLAGS += -Wundef
 #CFLAGS += -fno-unit-at-a-time
-#CFLAGS += -Wundef
 #CFLAGS += -Wunreachable-code
 #CFLAGS += -Wsign-compare
 CFLAGS += -Wa,-adhlns=$(<:%.c=$(OBJDIR)/%.lst)
@@ -263,7 +241,6 @@ CPPFLAGS += -fpack-struct
 CPPFLAGS += -fshort-enums
 CPPFLAGS += -fno-exceptions
 CPPFLAGS += -Wall
-CPPFLAGS += -Wundef
 CFLAGS += -Wundef
 #CPPFLAGS += -mshort-calls
 #CPPFLAGS += -fno-unit-at-a-time
@@ -341,7 +318,7 @@ EXTMEMOPTS =
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS  = -Wl,-Map=$(TARGET).map,--cref
+LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 LDFLAGS += -Wl,--relax 
 LDFLAGS += -Wl,--gc-sections
 LDFLAGS += $(EXTMEMOPTS)
@@ -353,11 +330,13 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 
 #---------------- Programming Options (avrdude) ----------------
 
-# Programming hardware
+# Programming hardware: alf avr910 avrisp bascom bsd 
+# dt006 pavr picoweb pony-stk200 sp12 stk200 stk500
+#
 # Type: avrdude -c ?
 # to get a full listing.
 #
-AVRDUDE_PROGRAMMER = avrispmkii
+AVRDUDE_PROGRAMMER = jtagmkII
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
 AVRDUDE_PORT = usb
@@ -380,13 +359,10 @@ AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 # to submit bug reports.
 #AVRDUDE_VERBOSE = -v -v
 
-AVRDUDE_FORCE = -F
-
-AVRDUDE_FLAGS = -p $(MCU_AVRDUDE) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
 AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
 AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
 AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
-AVRDUDE_FLAGS += $(AVRDUDE_FORCE)
 
 
 
@@ -481,11 +457,10 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 
 # Default target.
-#all: begin gccversion sizebefore build checkinvalidevents showliboptions showtarget sizeafter end
-all: begin gccversion sizebefore build showliboptions showtarget sizeafter end
+all: begin gccversion sizebefore build checkinvalidevents showliboptions showtarget sizeafter end
 
 # Change the build target to build a HEX file or a library.
-build: elf hex eep lss sym asm
+build: elf hex eep lss sym
 #build: lib
 
 
@@ -494,7 +469,6 @@ hex: $(TARGET).hex
 eep: $(TARGET).eep
 lss: $(TARGET).lss
 sym: $(TARGET).sym
-asm: $(TARGET).s
 LIBNAME=lib$(TARGET).a
 lib: $(LIBNAME)
 
@@ -526,17 +500,17 @@ sizeafter:
 	@if test -f $(TARGET).elf; then echo; echo $(MSG_SIZE_AFTER); $(ELFSIZE); \
 	2>/dev/null; echo; fi
 
-#$(LUFA_PATH)/LUFA/LUFA_Events.lst:
-#	@make -C $(LUFA_PATH)/LUFA/ LUFA_Events.lst
+$(LUFA_PATH)/LUFA/LUFA_Events.lst:
+	@make -C $(LUFA_PATH)/LUFA/ LUFA_Events.lst
 
-#checkinvalidevents: $(LUFA_PATH)/LUFA/LUFA_Events.lst
-#	@echo
-#	@echo Checking for invalid events...
-#	@$(shell) avr-nm $(OBJ) | sed -n -e 's/^.*EVENT_/EVENT_/p' | \
-#	                 grep -F -v --file=$(LUFA_PATH)/LUFA/LUFA_Events.lst > InvalidEvents.tmp || true
-#	@sed -n -e 's/^/  WARNING - INVALID EVENT NAME: /p' InvalidEvents.tmp
-#	@if test -s InvalidEvents.tmp; then exit 1; fi
-	
+checkinvalidevents: $(LUFA_PATH)/LUFA/LUFA_Events.lst
+	@echo
+	@echo Checking for invalid events...
+	@$(shell) avr-nm $(OBJ) | sed -n -e 's/^.*EVENT_/EVENT_/p' | \
+	                 grep -F -v --file=$(LUFA_PATH)/LUFA/LUFA_Events.lst > InvalidEvents.tmp || true
+	@sed -n -e 's/^/  WARNING - INVALID EVENT NAME: /p' InvalidEvents.tmp
+	@if test -s InvalidEvents.tmp; then exit 1; fi
+
 showliboptions:
 	@echo
 	@echo ---- Compile Time Library Options ----
@@ -564,26 +538,25 @@ program: $(TARGET).hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 flip: $(TARGET).hex
-	batchisp -hardware usb -device $(MCU_DFU) -operation erase f
-	batchisp -hardware usb -device $(MCU_DFU) -operation loadbuffer $(TARGET).hex program
-	batchisp -hardware usb -device $(MCU_DFU) -operation start reset 0
+	batchisp -hardware usb -device $(MCU) -operation erase f
+	batchisp -hardware usb -device $(MCU) -operation loadbuffer $(TARGET).hex program
+	batchisp -hardware usb -device $(MCU) -operation start reset 0
 
 dfu: $(TARGET).hex
-	dfu-programmer $(MCU_DFU) erase
-	dfu-programmer $(MCU_DFU) flash --debug 1 $(TARGET).hex
-	dfu-programmer $(MCU_DFU) reset
-
+	dfu-programmer $(MCU) erase
+	dfu-programmer $(MCU) flash --debug 1 $(TARGET).hex
+	dfu-programmer $(MCU) reset
 
 flip-ee: $(TARGET).hex $(TARGET).eep
 	$(COPY) $(TARGET).eep $(TARGET)eep.hex
-	batchisp -hardware usb -device $(MCU_DFU) -operation memory EEPROM erase
-	batchisp -hardware usb -device $(MCU_DFU) -operation memory EEPROM loadbuffer $(TARGET)eep.hex program
-	batchisp -hardware usb -device $(MCU_DFU) -operation start reset 0
+	batchisp -hardware usb -device $(MCU) -operation memory EEPROM erase
+	batchisp -hardware usb -device $(MCU) -operation memory EEPROM loadbuffer $(TARGET)eep.hex program
+	batchisp -hardware usb -device $(MCU) -operation start reset 0
 	$(REMOVE) $(TARGET)eep.hex
 
 dfu-ee: $(TARGET).hex $(TARGET).eep
-	dfu-programmer $(MCU_DFU) flash-eeprom --debug 1 --suppress-bootloader-mem $(TARGET).eep
-	dfu-programmer $(MCU_DFU) reset
+	dfu-programmer $(MCU) flash-eeprom --debug 1 --suppress-bootloader-mem $(TARGET).eep
+	dfu-programmer $(MCU) reset
 
 
 # Generate avr-gdb config/init file which does the following:
@@ -643,7 +616,7 @@ extcoff: $(TARGET).elf
 %.hex: %.elf
 	@echo
 	@echo $(MSG_FLASH) $@
-	$(OBJCOPY) -O $(FORMAT) -R .eeprom -R .fuse -R .lock $< $@
+	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
 
 %.eep: %.elf
 	@echo
@@ -655,7 +628,7 @@ extcoff: $(TARGET).elf
 %.lss: %.elf
 	@echo
 	@echo $(MSG_EXTENDED_LISTING) $@
-	$(OBJDUMP) -h -S -z $< > $@
+	$(OBJDUMP) -h -z -S $< > $@
 
 # Create a symbol table from ELF output file.
 %.sym: %.elf
@@ -727,8 +700,8 @@ clean_binary:
 	
 clean_list:
 	@echo $(MSG_CLEANING)
-	$(REMOVE) $(TARGET).hex
 	$(REMOVE) $(TARGET).eep
+	$(REMOVE) $(TARGET)eep.hex
 	$(REMOVE) $(TARGET).cof
 	$(REMOVE) $(TARGET).elf
 	$(REMOVE) $(TARGET).map
@@ -739,6 +712,7 @@ clean_list:
 	$(REMOVE) $(SRC:.c=.s)
 	$(REMOVE) $(SRC:.c=.d)
 	$(REMOVE) $(SRC:.c=.i)
+	$(REMOVE) InvalidEvents.tmp
 	$(REMOVEDIR) .dep
 
 doxygen:
@@ -758,7 +732,8 @@ $(shell mkdir $(OBJDIR) 2>/dev/null)
 
 
 # Listing of phony targets.
-.PHONY : all begin finish end sizebefore sizeafter gccversion \
-build elf hex eep lss sym coff extcoff doxygen clean          \
-clean_list clean_doxygen program dfu flip flip-ee dfu-ee      \
-debug gdb-config
+.PHONY : all checkinvalidevents showliboptions    \
+showtarget begin finish end sizebefore sizeafter  \
+gccversion build elf hex eep lss sym coff extcoff \
+program dfu flip flip-ee dfu-ee clean debug       \
+clean_list clean_binary gdb-config doxygen
